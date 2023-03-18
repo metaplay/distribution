@@ -130,8 +130,8 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	inflight[dgst] = struct{}{}
 	mu.Unlock()
 
-	// storeLocalCtx will be independent with ctx, because ctx it used to fetch remote image.
-	// There would be a situation, that is pulling remote bytes ends before pbs.storeLocal( 'Copy', 'Commit' ...)
+	// storeLocalCtx will be independent with ctx, because ctx is used to fetch remote image.
+	// There could be a situation, where pulling remote bytes ends before pbs.storeLocal( 'Copy', 'Commit' ...)
 	// Then the registry fails to cache the layer, even though the layer had been served to client.
 	storeLocalCtx, cancel := context.WithCancel(context.Background())
 	go func(dgst digest.Digest) {
