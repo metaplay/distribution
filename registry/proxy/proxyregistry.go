@@ -317,6 +317,10 @@ func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
 		}
 	}
 
+	if ns == "docker.io" {
+		ns = "registry-1.docker.io"
+	}
+
 	named, err := reference.WithName(name)
 	if err != nil {
 		return url.URL{}, nil, err
