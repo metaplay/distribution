@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/distribution/distribution/v3"
@@ -153,11 +154,11 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	localName := name
 	remoteURL := pr.remoteURL
 	if pr.enableNamespaces {
-		requestRemoteURL, err := extractRemoteURL(ctx)
+		var err error
+		remoteURL, name, err = extractRemoteURL(ctx)
 		if err != nil {
 			return nil, err
 		}
-		remoteURL = requestRemoteURL
 
 		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name())
 		if err != nil {
@@ -247,7 +248,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 
 	remoteURL := r.remoteURL
 	if r.enableNamespaces {
-		requestRemoteNSURL, err := extractRemoteURL(ctx)
+		requestRemoteNSURL, _, err := extractRemoteURL(ctx)
 		if err != nil {
 			return err
 		}
@@ -299,19 +300,30 @@ func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
 }
 
-func extractRemoteURL(ctx context.Context) (url.URL, error) {
+func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
 	r, err := dcontext.GetRequest(ctx)
 	if err != nil {
-		return url.URL{}, err
+		return url.URL{}, nil, err
 	}
 
 	ns := r.URL.Query().Get("ns")
+	name := dcontext.GetStringValue(ctx, "vars.name")
 	if ns == "" {
-		return url.URL{}, errors.New("ns parameter is missing")
+		// When the ns parameter is missing, assume that the domain is already prepended to the image name
+		var found bool
+		ns, name, found = strings.Cut(name, "/")
+		if !found || strings.IndexRune(ns, '.') < 1 {
+			return url.URL{}, nil, errors.New("ns parameter is missing and image is not prefixed with domain")
+		}
+	}
+
+	named, err := reference.WithName(name)
+	if err != nil {
+		return url.URL{}, nil, err
 	}
 
 	return url.URL{
 		Scheme: "https",
 		Host:   ns,
-	}, nil
+	}, named, nil
 }
