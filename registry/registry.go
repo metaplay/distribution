@@ -100,29 +100,12 @@ var ServeCmd = &cobra.Command{
 			cmd.Usage()
 			os.Exit(1)
 		}
-
-		if config.HTTP.Debug.Addr != "" {
-			go func(addr string) {
-				logrus.Infof("debug server listening %v", addr)
-				if err := http.ListenAndServe(addr, nil); err != nil {
-					logrus.Fatalf("error listening on debug interface: %v", err)
-				}
-			}(config.HTTP.Debug.Addr)
-		}
-
 		registry, err := NewRegistry(ctx, config)
 		if err != nil {
 			logrus.Fatalln(err)
 		}
 
-		if config.HTTP.Debug.Prometheus.Enabled {
-			path := config.HTTP.Debug.Prometheus.Path
-			if path == "" {
-				path = "/metrics"
-			}
-			logrus.Info("providing prometheus metrics on ", path)
-			http.Handle(path, metrics.Handler())
-		}
+		configureDebugServer(config)
 
 		if err = registry.ListenAndServe(); err != nil {
 			logrus.Fatalln(err)
@@ -238,11 +221,10 @@ func (registry *Registry) ListenAndServe() error {
 		}
 
 		tlsConf := &tls.Config{
-			ClientAuth:               tls.NoClientCert,
-			NextProtos:               nextProtos(config),
-			MinVersion:               tlsMinVersion,
-			PreferServerCipherSuites: true,
-			CipherSuites:             tlsCipherSuites,
+			ClientAuth:   tls.NoClientCert,
+			NextProtos:   nextProtos(config),
+			MinVersion:   tlsMinVersion,
+			CipherSuites: tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
@@ -279,7 +261,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 			}
 
-			for _, subj := range pool.Subjects() {
+			for _, subj := range pool.Subjects() { //nolint:staticcheck // FIXME(thaJeztah): ignore SA1019: ac.(*accessController).rootCerts.Subjects has been deprecated since Go 1.18: if s was returned by SystemCertPool, Subjects will not include the system roots. (staticcheck)
 				dcontext.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
@@ -315,6 +297,29 @@ func (registry *Registry) ListenAndServe() error {
 		c, cancel := context.WithTimeout(context.Background(), config.HTTP.DrainTimeout)
 		defer cancel()
 		return registry.server.Shutdown(c)
+	}
+}
+
+func configureDebugServer(config *configuration.Configuration) {
+	if config.HTTP.Debug.Addr != "" {
+		go func(addr string) {
+			logrus.Infof("debug server listening %v", addr)
+			if err := http.ListenAndServe(addr, nil); err != nil {
+				logrus.Fatalf("error listening on debug interface: %v", err)
+			}
+		}(config.HTTP.Debug.Addr)
+		configurePrometheus(config)
+	}
+}
+
+func configurePrometheus(config *configuration.Configuration) {
+	if config.HTTP.Debug.Prometheus.Enabled {
+		path := config.HTTP.Debug.Prometheus.Path
+		if path == "" {
+			path = "/metrics"
+		}
+		logrus.Info("providing prometheus metrics on ", path)
+		http.Handle(path, metrics.Handler())
 	}
 }
 

@@ -1070,7 +1070,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		// the most recent skip directory to avoid walking over undesirable files
 		prevSkipDir string
 	)
-	prevDir = prefix + path
+	prevDir = strings.Replace(path, d.s3Path(""), prefix, 1)
 
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
@@ -1425,7 +1425,7 @@ func (w *writer) Close() error {
 	return w.flushPart()
 }
 
-func (w *writer) Cancel() error {
+func (w *writer) Cancel(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {
@@ -1459,6 +1459,30 @@ func (w *writer) Commit() error {
 		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,
+		})
+	}
+
+	// This is an edge case when we are trying to upload an empty chunk of data using
+	// a MultiPart upload. As a result we are trying to complete the MultipartUpload
+	// with an empty slice of `completedUploadedParts` which will always lead to 400
+	// being returned from S3 See: https://docs.aws.amazon.com/sdk-for-go/api/service/s3/#CompletedMultipartUpload
+	// Solution: we upload an empty i.e. 0 byte part as a single part and then append it
+	// to the completedUploadedParts slice used to complete the Multipart upload.
+	if len(w.parts) == 0 {
+		resp, err := w.driver.S3.UploadPart(&s3.UploadPartInput{
+			Bucket:     aws.String(w.driver.Bucket),
+			Key:        aws.String(w.key),
+			PartNumber: aws.Int64(1),
+			UploadId:   aws.String(w.uploadID),
+			Body:       bytes.NewReader(nil),
+		})
+		if err != nil {
+			return err
+		}
+
+		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
+			ETag:       resp.ETag,
+			PartNumber: aws.Int64(1),
 		})
 	}
 
