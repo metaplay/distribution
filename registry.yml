@@ -1,0 +1,64 @@
+version: 0.1
+
+log:
+  accesslog:
+    disabled: false
+  level: debug
+  formatter: json
+
+storage:
+  inmemory:
+  cache:
+    blobdescriptor: inmemory
+    blobdescriptorsize: 10000
+  delete:
+    enabled: false
+  redirect:
+    disable: false
+
+http:
+  addr: 0.0.0.0:5000 # ipv4
+  net: tcp
+  prefix: /
+  host: http://local.io:5000  
+  secret: ""
+  relativeurls: false
+  draintimeout: 60s
+  http2:
+    disabled: false
+  debug:
+    addr: 0.0.0.0:5001
+    prometheus:
+        enabled: true
+        path: /metrics
+
+auth:
+  htpasswd:
+    realm: registry-realm
+    path: /auth/htpasswd
+
+proxy:
+  enablenamespaces: true
+  credentials:
+    'https://gcr.io/':
+      username: 
+      password: 
+    'https://quay.io/':
+      username: 
+      password: 
+    'https://registry.k8s.io/':
+      username:
+      password:
+    'https://registry-1.docker.io/':
+      username: 
+      password: 
+
+health:
+  storagedriver:
+    enabled: false
+    interval: 30s
+    threshold: 3
+
+compatibility:
+  schema1:
+    enabled: true

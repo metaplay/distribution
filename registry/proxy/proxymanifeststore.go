@@ -31,6 +31,7 @@ func (pms proxyManifestStore) Exists(ctx context.Context, dgst digest.Digest) (b
 		return false, err
 	}
 	if exists {
+		dcontext.GetLogger(ctx).Infoln("Local Manifests exists")
 		return true, nil
 	}
 	if err := pms.authChallenger.tryEstablishChallenges(ctx); err != nil {

@@ -33,7 +33,7 @@ type proxyingRegistry struct {
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
 func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Namespace, driver driver.StorageDriver, config configuration.Proxy) (distribution.Namespace, error) {
-	remoteURL, err := url.Parse(config.RemoteURL)
+	remoteURL, err := url.Parse(config.RemoteURL) // this value is null and acts as a placeholder
 	if err != nil {
 		return nil, err
 	}
@@ -151,20 +151,24 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts)))
 
-	localName := name
-	remoteURL := pr.remoteURL
+	localName := name         // registry-1.docker.io/library/redis
+	remoteURL := pr.remoteURL // null
 	if pr.enableNamespaces {
 		var err error
-		remoteURL, name, err = extractRemoteURL(ctx)
+		remoteURL, name, err = extractRemoteURL(ctx) // https   registry-1.docker.io   %!s(bool=false) %!s(bool=false)
 		if err != nil {
 			return nil, err
 		}
 
-		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name())
+		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name()) //
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	// name: bitnami/aws-cli
+	// localName: registry-1.docker.io/library/redis
+	// remoteURL https://public.ecr.aws
 
 	localRepo, err := pr.embedded.Repository(ctx, localName)
 	if err != nil {
@@ -184,6 +188,9 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	if err != nil {
 		return nil, err
 	}
+
+	dcontext.GetLogger(ctx).Infof("New localManifests: %s", localManifests)
+	dcontext.GetLogger(ctx).Infof("New remoteManifests: %s", remoteManifests)
 
 	return &proxiedRepository{
 		blobStore: &proxyBlobStore{
@@ -255,7 +262,10 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 		remoteURL = requestRemoteNSURL
 	}
 
+	// if remoteURL.Host != "gcr.io" {
 	remoteURL.Path = "/v2/"
+	// }
+
 	challenges, err := r.cm.GetChallenges(remoteURL)
 	if err != nil {
 		return err
@@ -270,7 +280,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 		return err
 	}
 
-	dcontext.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, r.cm)
+	dcontext.GetLogger(ctx).Infof("Challenge established with upstream : %s | %s", remoteURL.String(), r.cm)
 	return nil
 }
 
@@ -307,7 +317,7 @@ func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
 	}
 
 	ns := r.URL.Query().Get("ns")
-	name := dcontext.GetStringValue(ctx, "vars.name")
+	name := dcontext.GetStringValue(ctx, "vars.name") // public.ecr.aws/bitnami/aws-cli
 	if ns == "" {
 		// When the ns parameter is missing, assume that the domain is already prepended to the image name
 		var found bool
@@ -317,9 +327,9 @@ func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
 		}
 	}
 
-	if ns == "docker.io" {
-		ns = "registry-1.docker.io"
-	}
+	// if ns == "docker.io" {
+	// 	ns = "registry-1.docker.io"
+	// }
 
 	named, err := reference.WithName(name)
 	if err != nil {

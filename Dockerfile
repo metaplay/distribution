@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.19.9
-ARG ALPINE_VERSION=3.16
+ARG GO_VERSION=1.20.4
+ARG ALPINE_VERSION=3.18
 ARG XX_VERSION=1.2.1
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
@@ -52,7 +52,7 @@ COPY --from=releaser /out /
 
 FROM alpine:${ALPINE_VERSION}
 RUN apk add --no-cache ca-certificates
-COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
+COPY ./registry.yml /etc/docker/registry/config.yml
 COPY --from=binary /registry /bin/registry
 VOLUME ["/var/lib/registry"]
 EXPOSE 5000

@@ -60,7 +60,7 @@ func configureAuth(configCredentials map[string]configuration.ProxyCredential) (
 func getAuthURLs(remoteURL string) ([]string, error) {
 	authURLs := []string{}
 
-	resp, err := http.Get(remoteURL + "/v2/")
+	resp, err := http.Get(remoteURL + "v2/")
 	if err != nil {
 		return nil, err
 	}
