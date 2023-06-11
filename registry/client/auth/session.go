@@ -91,16 +91,13 @@ func (ea *endpointAuthorizer) ModifyRequest(req *http.Request) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("pinging challenge completed: %s\n", challenges)
 
 	if len(challenges) > 0 {
 		for _, handler := range ea.handlers {
 			for _, c := range challenges {
 				if c.Scheme != handler.Scheme() {
-					fmt.Printf("c.Scheme: %s does not match with handler scheme: %s\n", c.Scheme, handler.Scheme())
 					continue
 				}
-				fmt.Printf("c.Scheme: %s match with handler scheme: %s\n", c.Scheme, handler.Scheme())
 				if err := handler.AuthorizeRequest(req, c.Parameters); err != nil {
 					return err
 				}
@@ -406,10 +403,7 @@ type getTokenResponse struct {
 }
 
 func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
-	fmt.Println("Basic Auth")
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, realm.String(), nil)
-	fmt.Printf("Basic Auth | req: %s\n", realm.String())
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -422,8 +416,6 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 
 	var s string
 	for _, scope := range scopes {
-		fmt.Printf("Basic Auth | req param scope: %s\n", scope)
-
 		s = strings.Replace(scope, "registry-1.docker.io/", "", -1)
 		s = strings.Replace(s, "gcr.io/", "", -1)
 		reqParams.Add("scope", s)
@@ -445,17 +437,13 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 			req.SetBasicAuth(username, password)
 		}
 	}
-	fmt.Printf("Basic Auth | req param: %s\n", reqParams)
 	req.URL.RawQuery = reqParams.Encode()
 
 	resp, err := th.client().Do(req)
 	if err != nil {
-		fmt.Printf("Basic Auth | resp error: %s\n", err)
 		return "", time.Time{}, err
 	}
 	defer resp.Body.Close()
-
-	fmt.Printf("Basic Auth | resp.StatusCode: %02d\n", resp.StatusCode)
 
 	if !client.SuccessStatus(resp.StatusCode) {
 		err := client.HandleErrorResponse(resp)
@@ -494,8 +482,6 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 		// issued_at is optional in the token response.
 		tr.IssuedAt = th.clock.Now().UTC()
 	}
-
-	fmt.Printf("Basic Auth | resp.StatusCode: %s\n", tr.Token)
 
 	return tr.Token, tr.IssuedAt.Add(time.Duration(tr.ExpiresIn) * time.Second), nil
 }

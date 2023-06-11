@@ -32,11 +32,6 @@ http:
         enabled: true
         path: /metrics
 
-auth:
-  htpasswd:
-    realm: registry-realm
-    path: /auth/htpasswd
-
 proxy:
   enablenamespaces: true
   credentials:
