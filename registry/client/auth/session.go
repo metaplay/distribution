@@ -416,8 +416,18 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 
 	var s string
 	for _, scope := range scopes {
-		s = strings.Replace(scope, "registry-1.docker.io/", "", -1)
-		s = strings.Replace(s, "gcr.io/", "", -1)
+		s = scope
+
+		if strings.Contains(scope, "registry-1.docker.io/") {
+			s = strings.Replace(scope, "registry-1.docker.io/", "", -1)
+		} else if strings.Contains(scope, "gcr.io/") {
+			if strings.Contains(scope, "us.gcr.io/") {
+				s = strings.Replace(scope, "us.gcr.io/", "", -1)
+			} else {
+				s = strings.Replace(scope, "gcr.io/", "", -1)
+			}
+		}
+
 		reqParams.Add("scope", s)
 	}
 

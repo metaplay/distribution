@@ -309,11 +309,37 @@ func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
 	ns := r.URL.Query().Get("ns")
 	name := dcontext.GetStringValue(ctx, "vars.name")
 	if ns == "" {
-		// When the ns parameter is missing, assume that the domain is already prepended to the image name
-		var found bool
-		ns, name, found = strings.Cut(name, "/")
-		if !found || strings.IndexRune(ns, '.') < 1 {
-			return url.URL{}, nil, errors.New("ns parameter is missing and image is not prefixed with domain")
+		// When the ns parameter is missing, assume that the domain is already prepended to the image name or using the default domain
+		count := strings.Count(name, "/")
+
+		dcontext.GetLogger(ctx).Infof("RemoreURL extracted: %s", r.URL.Path)
+
+		if count >= 2 {
+			// domain is appended
+			ns, name, _ = strings.Cut(name, "/")
+			if strings.IndexRune(ns, '.') < 1 {
+				return url.URL{}, nil, errors.New("ns parameter is corrupted")
+			}
+
+			dcontext.GetLogger(ctx).Errorf("name: %s", name)
+
+		} else if count == 1 {
+			first, last, _ := strings.Cut(name, "/")
+
+			if first != "registry.k8s.io" {
+				// no domain provided, swtich to default domain registry-1.docker.io
+				dcontext.GetLogger(ctx).Infoln("RemoreURL with domain prepended")
+				ns = "registry-1.docker.io"
+			} else {
+				// registry.k8s.io does not require a name as other repos, so just set ns and name accordingly
+				ns = first
+				name = last
+			}
+		} else if count == 0 {
+			// neither domain nor repo is provided, swtich to default domain and repo
+			dcontext.GetLogger(ctx).Infoln("RemoreURL with domain and repo prepended")
+			ns = "registry-1.docker.io"
+			name = "library/" + name
 		}
 	}
 

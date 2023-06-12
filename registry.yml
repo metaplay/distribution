@@ -35,18 +35,24 @@ http:
 proxy:
   enablenamespaces: true
   credentials:
-    'https://gcr.io/':
+    'https://gcr.io/': # gcr.io /google-containers/busybox:latest
       username: 
       password: 
-    'https://quay.io/':
-      username: 
-      password: 
-    'https://registry.k8s.io/':
+    'https://quay.io/': # quay.io/prometheus/node-exporter
       username:
       password:
-    'https://registry-1.docker.io/':
+    'https://registry.k8s.io/': # registry.k8s.io/pause:latest
+      username:
+      password:
+    'https://registry-1.docker.io/': # registry-1.docker.io/library/redis
       username: 
-      password: 
+      password:
+    'https://ghcr.io/': # ghcr.io/anais-codefresh/react-article-display:2.0.0
+      username:
+      password:
+    'https://us.gcr.io/': # us.gcr.io/google-containers/busybox:latest
+      username:
+      password:
 
 health:
   storagedriver:
