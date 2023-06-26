@@ -135,6 +135,21 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
 	c := pr.authChallenger
 
+	localName := name
+	remoteURL := pr.remoteURL
+	if pr.enableNamespaces {
+		var err error
+		remoteURL, name, err = extractRemoteURL(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	tkopts := auth.TokenHandlerOptions{
 		Transport:   http.DefaultTransport,
 		Credentials: c.credentialStore(),
@@ -150,21 +165,6 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	tr := transport.NewTransport(http.DefaultTransport,
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts)))
-
-	localName := name
-	remoteURL := pr.remoteURL
-	if pr.enableNamespaces {
-		var err error
-		remoteURL, name, err = extractRemoteURL(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name())
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	localRepo, err := pr.embedded.Repository(ctx, localName)
 	if err != nil {
