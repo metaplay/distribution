@@ -1,0 +1,64 @@
+version: 0.1
+
+log:
+  accesslog:
+    disabled: false
+  fields:
+    service: registry
+    environment: dev
+  level: info
+  formatter: json
+
+storage:
+  inmemory:
+  cache:
+    blobdescriptor: inmemory
+  delete:
+    enabled: true
+  maintenance:
+    uploadpurging:
+      enabled: false
+
+http:
+  addr: :5000
+  net: tcp
+  prefix: /
+  secret: ""
+  relativeurls: false
+  draintimeout: 60s
+  headers:
+    X-Content-Type-Options: [nosniff]
+  http2:
+    disabled: false
+
+proxy:
+  enablenamespaces: true
+  credentials:
+    "https://gcr.io/":
+      username:
+      password:
+    "https://quay.io/":
+      username:
+      password:
+    "https://registry.k8s.io/":
+      username:
+      password:
+    "https://registry-1.docker.io/":
+      username:
+      password:
+    "https://ghcr.io/":
+      username:
+      password:
+    "https://us.gcr.io/":
+      username:
+      password:
+
+health:
+  storagedriver:
+    enabled: true
+    interval: 30s
+    threshold: 3
+
+compatibility:
+  schema1:
+    enabled: true
